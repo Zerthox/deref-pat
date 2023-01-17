@@ -7,8 +7,8 @@ use crate::{
 use std::mem;
 use syn::{
     visit_mut::{self, VisitMut},
-    Block, Expr, ExprBlock, ExprIf, ExprLet, ExprPath, FieldPat, Ident, Pat, PatIdent, PatTuple,
-    PatTupleStruct, Stmt,
+    Block, Expr, ExprBlock, ExprIf, ExprLet, ExprPath, ExprTuple, FieldPat, Ident, Pat, PatIdent,
+    PatTuple, PatTupleStruct, Stmt,
 };
 
 /// Transforms deref patterns in the [`Expr`].
@@ -31,7 +31,7 @@ impl Transformer {
     fn gen_pat(&mut self) -> Pat {
         Pat::TupleStruct(PatTupleStruct {
             attrs: vec![],
-            path: create_path(["core", "option", "Some"], true),
+            path: create_path(["core", "option", "Option", "Some"], true),
             pat: PatTuple {
                 attrs: vec![],
                 paren_token: Default::default(),
@@ -52,7 +52,7 @@ impl Transformer {
         })
     }
 
-    fn gen_expr(&mut self) -> Expr {
+    fn gen_expr(&mut self, _input: Expr) -> Expr {
         let var = Expr::Let(ExprLet {
             attrs: vec![],
             let_token: Default::default(),
@@ -67,9 +67,15 @@ impl Transformer {
             expr: Expr::Path(ExprPath {
                 attrs: vec![],
                 qself: None,
-                path: create_path(["core", "option", "None"], true),
+                path: create_path(["core", "option", "Option", "None"], true),
             })
             .into(),
+        });
+
+        let result = Expr::Path(ExprPath {
+            attrs: vec![],
+            qself: None,
+            path: create_path([Self::RESULT], false),
         });
 
         Expr::Block(ExprBlock {
@@ -77,7 +83,7 @@ impl Transformer {
             label: None,
             block: Block {
                 brace_token: Default::default(),
-                stmts: std::iter::once(Stmt::Expr(var)).collect(),
+                stmts: vec![Stmt::Semi(var, Default::default()), Stmt::Expr(result)],
             },
         })
     }
@@ -95,7 +101,16 @@ impl VisitMut for Transformer {
             self.visit_pat_mut(&mut let_guard.pat);
             if !self.deref_pats.is_empty() {
                 let_guard.pat = self.gen_pat();
-                let_guard.expr = self.gen_expr().into();
+                let input = mem::replace(
+                    &mut let_guard.expr,
+                    Expr::Tuple(ExprTuple {
+                        attrs: vec![],
+                        paren_token: Default::default(),
+                        elems: Default::default(),
+                    })
+                    .into(),
+                );
+                let_guard.expr = self.gen_expr(*input).into();
             }
 
             self.collect = saved;
