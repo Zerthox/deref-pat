@@ -1,14 +1,15 @@
 use deref_pat::deref_pat;
 use pretty_assertions::assert_eq;
 
-#[derive(Debug)]
-enum Tree {
-    Node { left: Box<Tree>, right: Box<Tree> },
-    Leaf,
-}
+#[test]
+fn tree() {
+    #[derive(Debug)]
+    enum Tree {
+        Node { left: Box<Tree>, right: Box<Tree> },
+        Leaf,
+    }
 
-fn tree() -> Tree {
-    Tree::Node {
+    let tree = Tree::Node {
         left: Tree::Node {
             left: Tree::Leaf.into(),
             right: Tree::Node {
@@ -19,13 +20,9 @@ fn tree() -> Tree {
         }
         .into(),
         right: Tree::Leaf.into(),
-    }
-}
+    };
 
-#[test]
-fn if_let_expr() {
-    let tree = tree();
-    let x = deref_pat! {
+    let matches = deref_pat! {
         if let Tree::Node {
             #[deref]
                 left:
@@ -43,5 +40,24 @@ fn if_let_expr() {
             false
         }
     };
-    assert_eq!(x, true);
+    assert_eq!(matches, true);
+}
+
+#[test]
+fn vec() {
+    struct VecParent {
+        vec: Vec<u32>,
+    }
+
+    let vec_parent = VecParent { vec: vec![0, 1, 2] };
+
+    deref_pat! {
+        if let VecParent { #[deref] vec: [first, second, third] } = &vec_parent {
+            assert_eq!(*first, 0);
+            assert_eq!(*second, 1);
+            assert_eq!(*third, 2);
+        } else {
+            panic!("pattern did not match");
+        }
+    };
 }
