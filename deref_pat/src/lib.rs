@@ -21,7 +21,7 @@ where
     type Target = &'a T::Target;
 
     fn deref(self) -> Self::Target {
-        self.deref()
+        &*self
     }
 }
 
@@ -32,7 +32,7 @@ where
     type Target = &'a mut T::Target;
 
     fn deref(self) -> Self::Target {
-        self.deref_mut()
+        &mut *self
     }
 }
 
