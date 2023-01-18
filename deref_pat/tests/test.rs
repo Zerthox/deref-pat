@@ -1,4 +1,5 @@
 use deref_pat::deref_pat;
+use pretty_assertions::assert_eq;
 
 #[derive(Debug)]
 enum Tree {
@@ -23,22 +24,24 @@ fn tree() -> Tree {
 
 #[test]
 fn if_let_expr() {
+    let tree = tree();
     let x = deref_pat! {
         if let Tree::Node {
-            left,
             #[deref]
-                right:
+                left:
                 Tree::Node {
                     #[deref]
                         left: leaf @ Tree::Leaf,
-                    right,
+                    right: sibling,
                 },
-        } = tree()
+                right: other_tree,
+        } = tree
         {
-            dbg!(left, leaf, right);
+            let _ = (other_tree, leaf, sibling);
             true
         } else {
             false
         }
     };
+    assert_eq!(x, true);
 }

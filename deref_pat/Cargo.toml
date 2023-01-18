@@ -1,0 +1,12 @@
+[package]
+name = "deref_pat"
+version = "0.1.0"
+edition = "2021"
+authors = ["Zerthox"]
+description = "Macro to use deref patterns."
+
+[dependencies]
+deref_pat_macro = { path = "../deref_pat_macro" }
+
+[dev-dependencies]
+pretty_assertions = "1.3.0"

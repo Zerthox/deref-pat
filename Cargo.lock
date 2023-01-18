@@ -16,7 +16,14 @@ dependencies = [
 name = "deref_pat"
 version = "0.1.0"
 dependencies = [
+ "deref_pat_macro",
  "pretty_assertions",
+]
+
+[[package]]
+name = "deref_pat_macro"
+version = "0.1.0"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn",

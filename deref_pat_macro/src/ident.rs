@@ -1,7 +1,7 @@
 use proc_macro2::Span;
 use syn::Ident;
 
-pub const PREFIX: &str = "deref_pat";
+pub const PREFIX: &str = concat!("_", env!("CARGO_PKG_NAME"));
 
 #[derive(Debug, Default)]
 pub struct IdentGen {
