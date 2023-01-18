@@ -5,9 +5,8 @@ use crate::{
 use std::{collections::VecDeque, iter, mem};
 use syn::{
     visit_mut::{self, VisitMut},
-    Block, Expr, ExprAssign, ExprBlock, ExprIf, ExprLet, ExprStruct, ExprTuple, FieldPat,
-    FieldValue, Ident, Item, ItemUse, Member, Pat, PatIdent, PatTuple, PatTupleStruct, Stmt,
-    UseName, UsePath, UseTree, Visibility,
+    Block, Expr, ExprAssign, ExprBlock, ExprIf, ExprLet, ExprTuple, FieldPat, Ident, Item, ItemUse,
+    Pat, PatIdent, PatTuple, PatTupleStruct, Stmt, UseName, UsePath, UseTree, Visibility,
 };
 
 /// Transforms deref patterns in the [`Expr`].
@@ -57,23 +56,33 @@ impl Transformer {
             pat: PatTuple {
                 attrs: vec![],
                 paren_token: Default::default(),
-                elems: iter::once(Pat::Tuple(PatTuple {
-                    attrs: vec![],
-                    paren_token: Default::default(),
-                    elems: self
-                        .bound_idents
-                        .iter()
-                        .map(|ident| {
-                            Pat::Ident(PatIdent {
-                                attrs: vec![],
-                                by_ref: None,
-                                mutability: None,
-                                ident: ident.clone(),
-                                subpat: None,
+                elems: iter::once(if let [single] = self.bound_idents.as_slice() {
+                    Pat::Ident(PatIdent {
+                        attrs: vec![],
+                        by_ref: None,
+                        mutability: None,
+                        ident: single.clone(),
+                        subpat: None,
+                    })
+                } else {
+                    Pat::Tuple(PatTuple {
+                        attrs: vec![],
+                        paren_token: Default::default(),
+                        elems: self
+                            .bound_idents
+                            .iter()
+                            .map(|ident| {
+                                Pat::Ident(PatIdent {
+                                    attrs: vec![],
+                                    by_ref: None,
+                                    mutability: None,
+                                    ident: ident.clone(),
+                                    subpat: None,
+                                })
                             })
-                        })
-                        .collect(),
-                }))
+                            .collect(),
+                    })
+                })
                 .collect(),
             },
         })
@@ -104,15 +113,12 @@ impl Transformer {
             attrs: vec![],
             left: create_path([Self::RESULT], false).to_expr().into(),
             eq_token: Default::default(),
-            right: Expr::Struct(ExprStruct {
-                attrs: vec![],
-                path: create_path(["core", "option", "Option", "Some"], true),
-                brace_token: Default::default(),
-                fields: iter::once(FieldValue {
-                    attrs: vec![],
-                    member: Member::Unnamed(0.into()),
-                    colon_token: Some(Default::default()),
-                    expr: Expr::Tuple(ExprTuple {
+            right: create_call(
+                create_path(["core", "option", "Option", "Some"], true).to_expr(),
+                [if self.bound_idents.len() == 1 {
+                    self.bound_idents.pop().unwrap().to_expr()
+                } else {
+                    Expr::Tuple(ExprTuple {
                         attrs: vec![],
                         paren_token: Default::default(),
                         elems: self
@@ -120,12 +126,9 @@ impl Transformer {
                             .drain(..)
                             .map(|ident| ident.to_expr())
                             .collect(),
-                    }),
-                })
-                .collect(),
-                dot2_token: None,
-                rest: None,
-            })
+                    })
+                }],
+            )
             .into(),
         });
 
