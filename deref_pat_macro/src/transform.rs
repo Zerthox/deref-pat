@@ -237,7 +237,7 @@ impl DerefPat {
         create_if_let(
             self.pat,
             create_call(
-                create_path(["PatDeref", "deref"], false).to_expr(),
+                create_path(["PatDeref", "pat_deref"], false).to_expr(),
                 [self.ident.to_expr()],
             ),
             vec![inner.to_semi_stmt()],

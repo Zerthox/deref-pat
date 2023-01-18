@@ -11,7 +11,7 @@ pub trait PatDeref {
     type Target: ?Sized;
 
     /// Dereferences the value.
-    fn deref(self) -> Self::Target;
+    fn pat_deref(self) -> Self::Target;
 }
 
 impl<'a, T> PatDeref for &'a T
@@ -20,7 +20,7 @@ where
 {
     type Target = &'a T::Target;
 
-    fn deref(self) -> Self::Target {
+    fn pat_deref(self) -> Self::Target {
         &*self
     }
 }
@@ -31,7 +31,7 @@ where
 {
     type Target = &'a mut T::Target;
 
-    fn deref(self) -> Self::Target {
+    fn pat_deref(self) -> Self::Target {
         &mut *self
     }
 }
@@ -39,7 +39,7 @@ where
 impl<T> PatDeref for Box<T> {
     type Target = T;
 
-    fn deref(self) -> Self::Target {
+    fn pat_deref(self) -> Self::Target {
         *self
     }
 }
