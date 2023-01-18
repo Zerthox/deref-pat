@@ -45,14 +45,14 @@ fn tree() {
 
 #[test]
 fn vec() {
-    struct VecParent {
+    struct Parent {
         vec: Vec<u32>,
     }
 
-    let vec_parent = VecParent { vec: vec![0, 1, 2] };
+    let parent = Parent { vec: vec![0, 1, 2] };
 
     deref_pat! {
-        if let VecParent { #[deref] vec: [first, second, third] } = &vec_parent {
+        if let Parent { #[deref] vec: [first, second, third] } = &parent {
             assert_eq!(*first, 0);
             assert_eq!(*second, 1);
             assert_eq!(*third, 2);
@@ -60,4 +60,42 @@ fn vec() {
             panic!("pattern did not match");
         }
     };
+}
+
+#[test]
+fn string() {
+    struct Parent {
+        string: String,
+    }
+
+    let parent = Parent {
+        string: "foo".into(),
+    };
+
+    deref_pat! {
+        if let Parent { #[deref] string: bound @ "foo" } = &parent {
+            assert_eq!(bound, "foo");
+        } else {
+            panic!("pattern did not match");
+        }
+    };
+}
+
+#[test]
+fn mutate() {
+    struct Parent {
+        inner: Box<usize>,
+    }
+
+    let mut parent = Parent { inner: 123.into() };
+
+    deref_pat! {
+        if let Parent { #[deref] inner: inner @ 123 } = &mut parent {
+            *inner = 456;
+        } else {
+            panic!("pattern did not match");
+        }
+    };
+
+    assert_eq!(*parent.inner, 456);
 }
