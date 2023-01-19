@@ -178,6 +178,9 @@ impl VisitMut for Transformer {
             expr_let.expr = self.gen_expr(pat, *input).into();
         }
 
+        // ensure no leftover bound idents
+        self.bound_idents.clear();
+
         self.collect = saved;
     }
 

@@ -4,8 +4,7 @@ mod util;
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::parse_macro_input;
-use syn::Expr;
+use syn::{parse_macro_input, Expr};
 use transform::transform;
 
 /// Enables use of deref patterns in `if let` expressions.
@@ -22,7 +21,6 @@ use transform::transform;
 ///     }
 /// }
 /// ```
-
 #[proc_macro]
 pub fn deref_pat(input: TokenStream) -> TokenStream {
     let parsed = parse_macro_input!(input as Expr);
