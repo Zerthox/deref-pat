@@ -5,8 +5,8 @@ use crate::{
 use std::{collections::VecDeque, iter, mem};
 use syn::{
     visit_mut::{self, VisitMut},
-    Block, Expr, ExprAssign, ExprBlock, ExprIf, ExprLet, ExprTuple, FieldPat, Ident, Item, ItemUse,
-    Pat, PatIdent, PatTuple, PatTupleStruct, Stmt, UseName, UsePath, UseTree, Visibility,
+    Block, Expr, ExprAssign, ExprBlock, ExprLet, ExprTuple, FieldPat, Ident, Item, ItemUse, Pat,
+    PatIdent, PatTuple, PatTupleStruct, Stmt, UseName, UsePath, UseTree, Visibility,
 };
 
 /// Transforms deref patterns in the [`Expr`].
@@ -156,38 +156,29 @@ impl Transformer {
 }
 
 impl VisitMut for Transformer {
-    fn visit_expr_if_mut(&mut self, if_expr: &mut ExprIf) {
-        if let Expr::Let(let_guard) = if_expr.cond.as_mut() {
-            let saved = self.collect;
-            self.collect = true;
+    fn visit_expr_let_mut(&mut self, expr_let: &mut ExprLet) {
+        let saved = self.collect;
+        self.collect = true;
 
-            // ensure fresh idents
-            self.idents.reset();
+        // ensure fresh idents
+        self.idents.reset();
 
-            self.visit_pat_mut(&mut let_guard.pat);
-            if !self.deref_pats.is_empty() {
-                let pat = mem::replace(&mut let_guard.pat, self.gen_pat());
-                let input = mem::replace(
-                    &mut let_guard.expr,
-                    Expr::Tuple(ExprTuple {
-                        attrs: vec![],
-                        paren_token: Default::default(),
-                        elems: Default::default(),
-                    })
-                    .into(),
-                );
-                let_guard.expr = self.gen_expr(pat, *input).into();
-            }
-
-            self.collect = saved;
-        } else {
-            self.visit_expr_mut(&mut if_expr.cond);
+        self.visit_pat_mut(&mut expr_let.pat);
+        if !self.deref_pats.is_empty() {
+            let pat = mem::replace(&mut expr_let.pat, self.gen_pat());
+            let input = mem::replace(
+                &mut expr_let.expr,
+                Expr::Tuple(ExprTuple {
+                    attrs: vec![],
+                    paren_token: Default::default(),
+                    elems: Default::default(),
+                })
+                .into(),
+            );
+            expr_let.expr = self.gen_expr(pat, *input).into();
         }
 
-        self.visit_block_mut(&mut if_expr.then_branch);
-        if let Some((_, else_branch)) = &mut if_expr.else_branch {
-            self.visit_expr_mut(else_branch);
-        }
+        self.collect = saved;
     }
 
     fn visit_field_pat_mut(&mut self, field_pat: &mut FieldPat) {
