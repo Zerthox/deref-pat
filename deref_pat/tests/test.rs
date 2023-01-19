@@ -59,7 +59,7 @@ fn vec() {
         } else {
             panic!("pattern did not match");
         }
-    };
+    }
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn string() {
         } else {
             panic!("pattern did not match");
         }
-    };
+    }
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn mutate() {
         } else {
             panic!("pattern did not match");
         }
-    };
+    }
 
     assert_eq!(*parent.inner, 456);
 }
