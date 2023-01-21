@@ -99,3 +99,24 @@ fn mutate() {
 
     assert_eq!(*parent.inner, 456);
 }
+
+#[test]
+fn option() {
+    struct Test {
+        boxed: Box<u32>,
+        maybe: Option<u32>,
+    }
+
+    let test = Test {
+        boxed: 123.into(),
+        maybe: None,
+    };
+
+    deref_pat! {
+        if let Test { #[deref] boxed, maybe: None } = &test {
+            assert_eq!(*boxed, 123);
+        } else {
+            panic!("pattern did not match");
+        }
+    }
+}

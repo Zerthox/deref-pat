@@ -19,9 +19,16 @@ pub fn transform(mut expr: Expr) -> Expr {
 
 #[derive(Debug, Default)]
 struct Transformer {
+    /// Identifier generator.
     idents: IdentGen,
+
+    /// Whether to collect deref patterns & bound identifiers.
     collect: bool,
+
+    /// Collected deref patterns.
     deref_pats: VecDeque<DerefPat>,
+
+    /// Collected bound identifiers.
     bound_idents: Vec<Ident>,
 }
 
@@ -213,13 +220,12 @@ impl VisitMut for Transformer {
     }
 
     fn visit_pat_ident_mut(&mut self, pat_ident: &mut PatIdent) {
-        if self.collect {
+        // TODO: better way than just dirty check for ident?
+        if self.collect && pat_ident.ident != "None" {
             self.bound_idents.push(pat_ident.ident.clone());
-            if let Some((_, pat)) = &mut pat_ident.subpat {
-                self.visit_pat_mut(pat);
-            }
-        } else {
-            visit_mut::visit_pat_ident_mut(self, pat_ident);
+        }
+        if let Some((_, pat)) = &mut pat_ident.subpat {
+            self.visit_pat_mut(pat);
         }
     }
 }
