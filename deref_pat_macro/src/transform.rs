@@ -194,6 +194,7 @@ impl VisitMut for Transformer {
                 .position(|attr| attr.path.is_ident("deref"))
             {
                 field_pat.attrs.remove(pos);
+                field_pat.colon_token.get_or_insert(Default::default());
                 let ident = self.idents.next();
                 let pat = mem::replace(
                     &mut field_pat.pat,
