@@ -78,7 +78,7 @@ where
     type Target = &'a T::Target;
 
     fn pat_deref(self) -> Self::Target {
-        &*self
+        self
     }
 }
 
@@ -89,7 +89,7 @@ where
     type Target = &'a mut T::Target;
 
     fn pat_deref(self) -> Self::Target {
-        &mut *self
+        self
     }
 }
 
