@@ -1,12 +1,12 @@
 use crate::{
     ident::IdentGen,
-    util::{create_call, create_ident, create_if_let, create_path, ToExpr, ToStmt},
+    util::{create_call, create_if_let, create_path, IntoExpr, IntoPath, IntoStmt},
 };
 use std::{collections::VecDeque, iter, mem};
 use syn::{
     visit_mut::{self, VisitMut},
-    Block, Expr, ExprAssign, ExprBlock, ExprLet, ExprTuple, FieldPat, Ident, Item, ItemUse, Pat,
-    PatIdent, PatTuple, PatTupleStruct, Stmt, UseName, UsePath, UseTree, Visibility,
+    Block, Expr, ExprAssign, ExprBlock, ExprLet, ExprTuple, FieldPat, Ident, Pat, PatIdent,
+    PatTuple, PatTupleStruct,
 };
 
 /// Transforms deref patterns in the [`Expr`].
@@ -33,29 +33,6 @@ struct Transformer {
 }
 
 impl Transformer {
-    // FIXME: do not hardcode crate name
-    const CRATE_NAME: &str = "deref_pat";
-
-    const RESULT: &str = concat!("_", env!("CARGO_PKG_NAME"), "_result");
-
-    fn create_import(crate_name: impl AsRef<str>) -> Stmt {
-        Stmt::Item(Item::Use(ItemUse {
-            attrs: vec![],
-            vis: Visibility::Inherited,
-            use_token: Default::default(),
-            leading_colon: Some(Default::default()),
-            tree: UseTree::Path(UsePath {
-                ident: create_ident(crate_name),
-                colon2_token: Default::default(),
-                tree: UseTree::Name(UseName {
-                    ident: create_ident("PatDeref"),
-                })
-                .into(),
-            }),
-            semi_token: Default::default(),
-        }))
-    }
-
     fn gen_pat(&self) -> Pat {
         Pat::TupleStruct(PatTupleStruct {
             attrs: vec![],
@@ -96,8 +73,6 @@ impl Transformer {
     }
 
     fn gen_expr(&mut self, pat: Pat, input: Expr) -> Expr {
-        let import = Self::create_import(Self::CRATE_NAME);
-
         let var = Expr::Let(ExprLet {
             attrs: vec![],
             let_token: Default::default(),
@@ -105,25 +80,26 @@ impl Transformer {
                 attrs: vec![],
                 by_ref: None,
                 mutability: Some(Default::default()),
-                ident: create_ident(Self::RESULT),
+                ident: IdentGen::prefix("result"),
                 subpat: None,
             }),
             eq_token: Default::default(),
             expr: create_path(["core", "option", "Option", "None"], true)
-                .to_expr()
+                .into_expr()
                 .into(),
         });
 
-        let result = create_path([Self::RESULT], false).to_expr();
+        let result = IdentGen::prefix("result").into_path().into_expr();
 
         let assign = Expr::Assign(ExprAssign {
             attrs: vec![],
-            left: create_path([Self::RESULT], false).to_expr().into(),
+            left: IdentGen::prefix("result").into_path().into_expr().into(),
             eq_token: Default::default(),
             right: create_call(
-                create_path(["core", "option", "Option", "Some"], true).to_expr(),
+                create_path(["core", "option", "Option", "Some"], true).into_expr(),
                 [if self.bound_idents.len() == 1 {
-                    self.bound_idents.pop().unwrap().to_expr()
+                    IdentGen::prefix(format!("var_{}", self.bound_idents.pop().unwrap()))
+                        .into_expr()
                 } else {
                     Expr::Tuple(ExprTuple {
                         attrs: vec![],
@@ -131,7 +107,7 @@ impl Transformer {
                         elems: self
                             .bound_idents
                             .drain(..)
-                            .map(|ident| ident.to_expr())
+                            .map(|ident| IdentGen::prefix(format!("var_{}", ident)).into_expr())
                             .collect(),
                     })
                 }],
@@ -139,12 +115,12 @@ impl Transformer {
             .into(),
         });
 
-        let mut inner_if_let = self.deref_pats.pop_front().unwrap().to_expr(assign);
+        let mut inner_if_let = self.deref_pats.pop_front().unwrap().into_expr(assign);
         while let Some(pat) = self.deref_pats.pop_front() {
-            inner_if_let = pat.to_expr(inner_if_let);
+            inner_if_let = pat.into_expr(inner_if_let);
         }
 
-        let top_if_let = create_if_let(pat, input, vec![inner_if_let.to_semi_stmt()], None);
+        let top_if_let = create_if_let(pat, input, vec![inner_if_let.into_semi_stmt()], None);
 
         Expr::Block(ExprBlock {
             attrs: vec![],
@@ -152,10 +128,9 @@ impl Transformer {
             block: Block {
                 brace_token: Default::default(),
                 stmts: vec![
-                    import,
-                    var.to_semi_stmt(),
-                    top_if_let.to_semi_stmt(),
-                    result.to_expr_stmt(),
+                    var.into_semi_stmt(),
+                    top_if_let.into_semi_stmt(),
+                    result.into_expr_stmt(),
                 ],
             },
         })
@@ -223,12 +198,16 @@ impl VisitMut for Transformer {
         // TODO: better way than just dirty check for ident?
         if self.collect && pat_ident.ident != "None" {
             self.bound_idents.push(pat_ident.ident.clone());
+            pat_ident.ident = IdentGen::prefix(format!("var_{}", pat_ident.ident));
         }
         if let Some((_, pat)) = &mut pat_ident.subpat {
             self.visit_pat_mut(pat);
         }
     }
 }
+
+// FIXME: do not hardcode crate name
+const CRATE_NAME: &str = "deref_pat";
 
 #[derive(Debug)]
 struct DerefPat {
@@ -237,14 +216,14 @@ struct DerefPat {
 }
 
 impl DerefPat {
-    pub fn to_expr(self, inner: Expr) -> Expr {
+    pub fn into_expr(self, inner: Expr) -> Expr {
         create_if_let(
             self.pat,
             create_call(
-                create_path(["PatDeref", "pat_deref"], false).to_expr(),
-                [self.ident.to_expr()],
+                create_path([CRATE_NAME, "PatDeref", "pat_deref"], true).into_expr(),
+                [self.ident.into_expr()],
             ),
-            vec![inner.to_semi_stmt()],
+            vec![inner.into_semi_stmt()],
             None,
         )
     }

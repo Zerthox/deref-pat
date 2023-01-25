@@ -58,25 +58,18 @@ pub fn create_call(func: Expr, args: impl IntoIterator<Item = Expr>) -> Expr {
 }
 
 /// Helper to convert to an [`Expr`].
-pub trait ToExpr {
-    fn to_expr(self) -> Expr;
+pub trait IntoExpr {
+    fn into_expr(self) -> Expr;
 }
 
-impl ToExpr for Ident {
-    fn to_expr(self) -> Expr {
-        Expr::Path(ExprPath {
-            attrs: vec![],
-            qself: None,
-            path: Path {
-                leading_colon: None,
-                segments: iter::once(PathSegment::from(self)).collect(),
-            },
-        })
+impl IntoExpr for Ident {
+    fn into_expr(self) -> Expr {
+        self.into_path().into_expr()
     }
 }
 
-impl ToExpr for Path {
-    fn to_expr(self) -> Expr {
+impl IntoExpr for Path {
+    fn into_expr(self) -> Expr {
         Expr::Path(ExprPath {
             attrs: vec![],
             qself: None,
@@ -85,18 +78,31 @@ impl ToExpr for Path {
     }
 }
 
-/// Helpers to convert to an [`Stmt`].
-pub trait ToStmt {
-    fn to_semi_stmt(self) -> Stmt;
-    fn to_expr_stmt(self) -> Stmt;
+pub trait IntoPath {
+    fn into_path(self) -> Path;
 }
 
-impl ToStmt for Expr {
-    fn to_semi_stmt(self) -> Stmt {
+impl IntoPath for Ident {
+    fn into_path(self) -> Path {
+        Path {
+            leading_colon: None,
+            segments: iter::once(PathSegment::from(self)).collect(),
+        }
+    }
+}
+
+/// Helpers to convert to an [`Stmt`].
+pub trait IntoStmt {
+    fn into_semi_stmt(self) -> Stmt;
+    fn into_expr_stmt(self) -> Stmt;
+}
+
+impl IntoStmt for Expr {
+    fn into_semi_stmt(self) -> Stmt {
         Stmt::Semi(self, Default::default())
     }
 
-    fn to_expr_stmt(self) -> Stmt {
+    fn into_expr_stmt(self) -> Stmt {
         Stmt::Expr(self)
     }
 }

@@ -1,7 +1,5 @@
-use proc_macro2::Span;
+use crate::util::create_ident;
 use syn::Ident;
-
-pub const PREFIX: &str = concat!("_", env!("CARGO_PKG_NAME"));
 
 #[derive(Debug, Default)]
 pub struct IdentGen {
@@ -9,13 +7,19 @@ pub struct IdentGen {
 }
 
 impl IdentGen {
+    pub const PREFIX: &str = "deref_pat_";
+
     pub fn reset(&mut self) {
         self.count = 0;
     }
 
     pub fn next(&mut self) -> Ident {
-        let ident = Ident::new(&format!("{}{}", PREFIX, self.count), Span::mixed_site());
+        let ident = Self::prefix(self.count.to_string());
         self.count += 1;
         ident
+    }
+
+    pub fn prefix(ident: impl AsRef<str>) -> Ident {
+        create_ident(Self::PREFIX.to_string() + ident.as_ref())
     }
 }
